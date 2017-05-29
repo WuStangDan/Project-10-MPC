@@ -6,10 +6,10 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 20;
+size_t N = 15.0;
 double dt = 0.1; // 2 seconds prediction horizon.
 
-double ref_v = 40.0; // Reference velocity that controller should obtain.
+double ref_v = 20.0; // Reference velocity that controller should obtain.
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -111,10 +111,10 @@ class FG_eval {
 
       // Reference track of f(x) (what the controller is trying to follow).
       // y = c0 + c1*x + c2*x^2 + c3*x^3.
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0 ;//+ coeffs[2] * x0*x0;
-                    //  + coeffs[3] * x0*x0*x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);// +  2 * coeffs[2] * x0);
-                              //+ 3 * coeffs[3] * x0*x0);
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * x0*x0
+                      + coeffs[3] * x0*x0*x0;
+      AD<double> psides0 = CppAD::atan(coeffs[1] +  2 * coeffs[2] * x0
+                              + 3 * coeffs[3] * x0*x0);
 
 
       // State equations for global kinematic model (set to zero for solver):
@@ -189,10 +189,10 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     vars_upperbound[i] = 1.0e19;
   }
 
-  // Steering upper and lower limits. 25 degrees = 0.436332 radians.
+  // Steering upper and lower limits. 15 degrees = 0.261799 radians.
   for (int i = delta_start; i < (delta_start + N-1); i++) {
-    vars_lowerbound[i] = -0.436332;
-    vars_upperbound[i] = 0.436332;
+    vars_lowerbound[i] = -0.261799;
+    vars_upperbound[i] = 0.261799;
   }
 
   // Acceleration upper and lower limits.
