@@ -115,8 +115,8 @@ int main() {
 
           auto coeffs = polyfit(ptsx_eigen, ptsy_eigen, 3);
 
-          // Find cross track error.
-          double cte = polyeval(coeffs, 0) - py;
+          // Find cross track error
+          double cte = polyeval(coeffs, 0);
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs.
           double epsi = -atan(coeffs[1] +  2 * coeffs[2] * 0
@@ -124,6 +124,7 @@ int main() {
 
           // Set state values.
           Eigen::VectorXd state(6);
+          // MPH to m/s * 100 ms (latency).
           state << v*0.44704*0.1, 0, 0, v, cte, epsi;
 
           // Enter values into MPC and solve.

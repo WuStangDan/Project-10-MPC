@@ -9,7 +9,7 @@ using CppAD::AD;
 size_t N = 15.0;
 double dt = 0.05; // 2 seconds prediction horizon.
 
-double ref_v = 45.0; // Reference velocity that controller should obtain.
+double ref_v = 60.0; // Reference velocity that controller should obtain.
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -57,7 +57,7 @@ class FG_eval {
     // Add cost for error for entire prediction horizon.
     for (int i = 0; i < N; i++) {
       // Cross track error and error psi references are zero.
-      fg[0] += CppAD::pow(vars[cte_start + i], 2)*0.1;
+      fg[0] += CppAD::pow(vars[cte_start + i], 2)*0.15;
       fg[0] += CppAD::pow(vars[epsi_start + i], 2)*150;
       fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
@@ -72,7 +72,7 @@ class FG_eval {
     // Add cost function for change in actuator inputs (derivative) to punish
     // rapid changes of input.
     for (int i = 1; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i] - vars[delta_start + (i-1)], 2)*500;
+      fg[0] += CppAD::pow(vars[delta_start + i] - vars[delta_start + (i-1)], 2)*1300;
       fg[0] += CppAD::pow(vars[a_start + i] - vars[a_start + (i-1)], 2)*40;
     }
 
