@@ -6,10 +6,10 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 15.0;
-double dt = 0.1; // 2 seconds prediction horizon.
+size_t N = 20.0;
+double dt = 0.05; // 2 seconds prediction horizon.
 
-double ref_v = 20.0; // Reference velocity that controller should obtain.
+double ref_v = 45.0; // Reference velocity that controller should obtain.
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -57,7 +57,7 @@ class FG_eval {
     // Add cost for error for entire prediction horizon.
     for (int i = 0; i < N; i++) {
       // Cross track error and error psi references are zero.
-      fg[0] += CppAD::pow(vars[cte_start + i], 2);
+      fg[0] += CppAD::pow(vars[cte_start + i], 2)*0.05;
       fg[0] += CppAD::pow(vars[epsi_start + i], 2);
       fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
@@ -65,14 +65,14 @@ class FG_eval {
     // Add cost for actuator inputs. Do not calculate control inputs for final
     // state since they will not be used.
     for (int i = 0; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[delta_start + i], 2)*10;
       fg[0] += CppAD::pow(vars[a_start + i], 2);
     }
 
     // Add cost function for change in actuator inputs (derivative) to punish
     // rapid changes of input.
     for (int i = 1; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i] - vars[delta_start + (i-1)], 2);
+      fg[0] += CppAD::pow(vars[delta_start + i] - vars[delta_start + (i-1)], 2)*10;
       fg[0] += CppAD::pow(vars[a_start + i] - vars[a_start + (i-1)], 2);
     }
 
@@ -191,14 +191,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Steering upper and lower limits. 15 degrees = 0.261799 radians.
   for (int i = delta_start; i < (delta_start + N-1); i++) {
-    vars_lowerbound[i] = -0.261799;
-    vars_upperbound[i] = 0.261799;
+    vars_lowerbound[i] = -0.139626;
+    vars_upperbound[i] = 0.139626;
   }
 
   // Acceleration upper and lower limits.
   for (int i = a_start; i < (a_start + N-1); i++) {
     vars_lowerbound[i] = -1.0; // Maximum braking.
-    vars_upperbound[i] = 0.7; // 70% of max throttle.
+    vars_upperbound[i] = 1.0; // 70% of max throttle.
   }
 
 
@@ -263,8 +263,29 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
 
+  // save x and y states.
+  x_vals.clear();
+  y_vals.clear();
+
+  x_vals.resize(N);
+  y_vals.resize(N);
+  for (int i = 0; i < N-1; i++) {
+    x_vals.push_back(solution.x[x_start+1+i]);
+    y_vals.push_back(solution.x[y_start+1+i]);
+  }
+
   return {solution.x[x_start + 1],   solution.x[y_start + 1],
           solution.x[psi_start + 1], solution.x[v_start + 1],
           solution.x[cte_start + 1], solution.x[epsi_start + 1],
           solution.x[delta_start],   solution.x[a_start]};
+}
+
+vector<double> MPC::Get_x_Vals()
+{
+  return x_vals;
+}
+
+vector<double> MPC::Get_y_Vals()
+{
+  return y_vals;
 }
