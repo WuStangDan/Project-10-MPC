@@ -9,7 +9,7 @@ using CppAD::AD;
 size_t N = 15.0;
 double dt = 0.05; // 2 seconds prediction horizon.
 
-double ref_v = 60.0; // Reference velocity that controller should obtain.
+double ref_v = 50.0; // Reference velocity that controller should obtain.
 
 // This value assumes the model presented in the classroom is used.
 //
