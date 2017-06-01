@@ -6,7 +6,7 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 20.0;
+size_t N = 15.0;
 double dt = 0.05; // 2 seconds prediction horizon.
 
 double ref_v = 45.0; // Reference velocity that controller should obtain.
@@ -57,23 +57,23 @@ class FG_eval {
     // Add cost for error for entire prediction horizon.
     for (int i = 0; i < N; i++) {
       // Cross track error and error psi references are zero.
-      fg[0] += CppAD::pow(vars[cte_start + i], 2)*0.05;
-      fg[0] += CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += CppAD::pow(vars[cte_start + i], 2)*0.1;
+      fg[0] += CppAD::pow(vars[epsi_start + i], 2)*150;
       fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
 
     // Add cost for actuator inputs. Do not calculate control inputs for final
     // state since they will not be used.
     for (int i = 0; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i], 2)*10;
+      fg[0] += CppAD::pow(vars[delta_start + i], 2)*100;
       fg[0] += CppAD::pow(vars[a_start + i], 2);
     }
 
     // Add cost function for change in actuator inputs (derivative) to punish
     // rapid changes of input.
     for (int i = 1; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i] - vars[delta_start + (i-1)], 2)*10;
-      fg[0] += CppAD::pow(vars[a_start + i] - vars[a_start + (i-1)], 2);
+      fg[0] += CppAD::pow(vars[delta_start + i] - vars[delta_start + (i-1)], 2)*500;
+      fg[0] += CppAD::pow(vars[a_start + i] - vars[a_start + (i-1)], 2)*40;
     }
 
     // Setup global kinematic model.
@@ -267,8 +267,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   x_vals.clear();
   y_vals.clear();
 
-  x_vals.resize(N);
-  y_vals.resize(N);
   for (int i = 0; i < N-1; i++) {
     x_vals.push_back(solution.x[x_start+1+i]);
     y_vals.push_back(solution.x[y_start+1+i]);
