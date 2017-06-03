@@ -3,107 +3,53 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
-## Dependencies
+## Model description
 
-* cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets) == 0.14, but the master branch will probably work just fine
-  * Follow the instructions in the [uWebSockets README](https://github.com/uWebSockets/uWebSockets/blob/master/README.md) to get setup for your platform. You can download the zip of the appropriate version from the [releases page](https://github.com/uWebSockets/uWebSockets/releases). Here's a link to the [v0.14 zip](https://github.com/uWebSockets/uWebSockets/archive/v0.14.0.zip).
-  * If you have MacOS and have [Homebrew](https://brew.sh/) installed you can just run the ./install-mac.sh script to install this.
-* Fortran Compiler
-  * Mac: `brew install gcc` (might not be required)
-  * Linux: `sudo apt-get install gfortran`. Additionall you have also have to install gcc and g++, `sudo apt-get install gcc g++`. Look in [this Dockerfile](https://github.com/udacity/CarND-MPC-Quizzes/blob/master/Dockerfile) for more info.
-* [Ipopt](https://projects.coin-or.org/Ipopt)
-  * Mac: `brew install ipopt`
-  * Linux
-    * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
-    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
-* [CppAD](https://www.coin-or.org/CppAD/)
-  * Mac: `brew install cppad`
-  * Linux `sudo apt-get install cppad` or equivalent.
-  * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
-* [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page). This is already part of the repo so you shouldn't have to worry about it.
-* Simulator. You can download these from the [releases tab](https://github.com/udacity/CarND-MPC-Project/releases).
-* Not a dependency but read the [DATA.md](./DATA.md) for a description of the data sent back from the simulator.
+### Model States
+
+The model has the following state variables:
+* X position
+* Y position
+* psi angle (cars absolute angle, not steering angle)
+* Speed
+* Cross Track Error
+* psi Error
+
+For this model X, Y, and psi position of (0,0,0) is considered to be the cars center with the hood of the car pointing along the x axis and the y axis passing left and right through the cars passenger and driver side door.
+
+The speed is measured directly by the simulator and placed into the first state. To calculate the cross track error and psi error, first a 3rd order polynomial is fit to the waypoints the car is told to follow. It is assumed that the waypoints are generated in global coordinate by a different part of the SDC stack. These waypoints are then converted to vehicle coordinates and fit with the polynomial. Based on this generated polynomial, the cross track error is calculated as the point where the polynomial crosses the y axis (x = 0 or not ahead or behind the car). Since the car is at y = 0, this value is the error. The psi error is angle of the line (derivative) at x = 0.
 
 
-## Basic Build Instructions
+### Actuators
 
+The state control outputs or actuators is the throttle position and steering angle. A 100 ms latency is simulated so that throttle and steering values are not executed 100 ms after they are sent out. However this is handled by MPC by modifying the X, Y states as described below.
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./mpc`.
+### Update equations.
 
-## Tips
+A global kinematic model is used to predict the cars location based on speed and steering angle. These two actuators are able to manipulate all 6 states therefore, in control system terms, the system has full controllability.
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
+The full update equations can be seen in the comments of FG_eval. In order to use the solver, all equations are set equal to zero.
 
-## Editor Settings
+### Latency and preprocessing.
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+Since the vehicles current position and waypoints are given in global coordinates, the waypoint coordinates are translated and rotated into the vehicles coordinates. If there was no latency, the MPC controller would always receive it's current state of (X,Y) as (0,0).
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+The cars speed, which is given in MPH, is converted to m/s before it is used by the MPC.
 
-## Code Style
+The actuator inputs have a 100 ms delay from being sent the actuation commands and executing them. This means that the MPC controller should predict its inputs not for its current state but for where it will be 100 ms from now based on current steering angle and speed. A simple unicycle model is used to predict the cars X and Y position based on current steering angle and speed. While not perfect, this model is very simple and is accurate for small time steps (100 ms) and small steering angles. Even though X and Y states are now non-zero, psi remains zero as the small steering angle and small time steps assumptions (which minimize the error when using the unicycle model for X and Y positions) do not hold up for the cars angle. Also this value when calculated exactly will still be small so keeping it at zero is a minor assumption that will have minimal impact.
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+### Cost Function
 
-## Project Instructions and Rubric
+The cost function is the heart of the MPC as it defines what the controller is trying to minimize by manipulating the actuators. For this project I found that the cost function needed to have a very heavy emphasis on smoothness of the steering input in order for the car to go around the track in a smooth and controlled manner. Thus high cost was placed on change in steering input and total steering input. This way the controller would be encouraged towards smaller and smoother turns than sharp and jerky ones.
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+For the errors, I found that the error in psi was far more important than cross track error in achieving this. This makes intuitive sense as if error psi is zero, then having a CTE will just mean that the car is taking the corner but either inside or wide of the planned route. Without this large emphasis on epsi over CTE, the car would turn very hard to stay in the center of the lane. This would put the car in situations where it is driving almost directly at the center line of the lane to quickly reduce the CTE. This made for a very jerky and unstable ride.
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
+Since the cost function puts a high cost on steering smoothness and epsi, the car takes almost every turn wide so that it doesn't have to steer as hard as it would on the center line or inside line. While this does make the cars wheel get very close to the outside yellow lines, this ensures the smoothest and most controlled ride possible. If this simulator was on a street as opposed to a race track, the cost function would be changed to put a very high price on CTE to ensure the car stays in its own lane.
 
-## Hints!
+### N and dt values.
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+dt is 0.1 s which is the exact same time as the latency. This is more by coincidence and then by design. I started with the idea of having my prediction horizon be between 1-2 seconds. I started with N of 30 and dt of 0.05 so that I would have 1.5 second prediction horizon. However just visually inspecting the distance between consecutive predictions, even at the cars top speed, seemed as if this level of discretization was overkill. Even though there is no issue in setting dt to a number greater than the latency (as the MPC is still recalculated every 100 ms, regardless of dt), I found that a .1 s dt with 15 time steps to have an acceptable distance (about 3 meters) between consecutive points at the cars max speed.
 
-## Call for IDE Profiles Pull Requests
+### Linear Speed Controller
 
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+A linear speed controller is used to adjust the cars reference speed (the speed the MPC tries to attain) based on the total cost estimated by the MPC. Thus when approaching a sharp corner with a high cost (due to high CTE or large steering deltas), the reference speed will be decreased. When on a section of the track with a low cost (small difference between predicted path and waypoint path) the reference speed will be increased. A max speed of 65 MPH has been enforced and the car will reach this speed consistently on the back straight.
