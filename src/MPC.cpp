@@ -261,7 +261,17 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Cost
   auto cost = solution.obj_value;
-  std::cout << "Cost " << cost << std::endl;
+  std::cout << "Cost " << cost << " ref_v " << ref_v << std::endl;
+
+  // Change car speed based on current calculated cost.
+  // Simple linear controller. Future work, proportional controller.
+  // This controller eventually reaches some steady state where its top speed
+  // on the straight section is 62 MPH.
+  if (cost < 30) {
+    ref_v += 0.2;
+  } else {
+    ref_v -= 0.4;
+  }
 
   // save x and y states.
   x_vals.clear();
