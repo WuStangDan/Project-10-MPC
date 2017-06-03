@@ -11,6 +11,8 @@ class MPC {
   MPC();
   vector<double> Get_x_Vals();
   vector<double> Get_y_Vals();
+  double GetSteering();
+  void SetSteering(double );
 
   virtual ~MPC();
 
@@ -21,6 +23,7 @@ class MPC {
 private:
   vector<double> x_vals;
   vector<double> y_vals;
+  double steering;
 };
 
 #endif /* MPC_H */

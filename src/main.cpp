@@ -125,7 +125,17 @@ int main() {
           // Set state values.
           Eigen::VectorXd state(6);
           // MPH to m/s * 100 ms (latency).
-          state << v*0.44704*0.1, 0, 0, v, cte, epsi;
+          // 100 ms from now state will be in new position based on current
+          // steering angle and speed.
+          // This is not a perfect car model but rather using a simplified
+          // unicycle model. However for the small time step it is accurate
+          // enough for this purpose.
+          // psi =/= steering angle as the car will always be straight in its
+          // own coordinate space however, because of the latency the car needs
+          // to act based on where its location will be 100 ms in the future.
+          // 1 MPH = 0.44704 m/s.
+          state << v*0.44704*0.1*cos(mpc.GetSteering()),
+                    v*0.44704*0.1*sin(mpc.GetSteering()), 0, v*0.44704, cte, epsi;
 
           // Enter values into MPC and solve.
           auto vars = mpc.Solve(state, coeffs);
@@ -134,6 +144,7 @@ int main() {
           double throttle_value;
 
           steer_value = -vars[6] / deg2rad(25.0);
+          mpc.SetSteering(vars[6]);
           throttle_value = vars[7];
 
           json msgJson;

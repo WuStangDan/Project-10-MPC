@@ -7,9 +7,11 @@ using CppAD::AD;
 
 // TODO: Set the timestep length and duration
 size_t N = 15.0;
-double dt = 0.05; // 2 seconds prediction horizon.
+double dt = 0.1;
 
-double ref_v = 50.0; // Reference velocity that controller should obtain.
+// 1 MPH = 0.44704 m/s.
+double ref_v = 50.0*0.44704; // Reference velocity that controller should obtain.
+
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -143,7 +145,10 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {}
+MPC::MPC()
+{
+  steering = 0.0;
+}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
@@ -265,13 +270,15 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Change car speed based on current calculated cost.
   // Simple linear controller. Future work, proportional controller.
-  // This controller eventually reaches some steady state where its top speed
-  // on the straight section is 62 MPH.
-  if (cost < 30) {
-    ref_v += 0.2;
+  if (cost < 16) {
+    // Max of 65 MPH.
+    if (ref_v < 65*0.44704) {
+      ref_v += 0.05;
+    }
   } else {
-    ref_v -= 0.4;
+    ref_v -= 0.1;
   }
+
 
   // save x and y states.
   x_vals.clear();
@@ -296,4 +303,14 @@ vector<double> MPC::Get_x_Vals()
 vector<double> MPC::Get_y_Vals()
 {
   return y_vals;
+}
+
+void MPC::SetSteering(double newangle)
+{
+  steering = newangle;
+}
+
+double MPC::GetSteering()
+{
+  return steering;
 }
